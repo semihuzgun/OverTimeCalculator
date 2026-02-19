@@ -1,0 +1,27 @@
+# Flutter/Dart
+source/build/
+source/.dart_tool/
+source/.flutter-plugins
+source/.flutter-plugins-dependencies
+source/.pub-cache/
+source/.pub/
+source/lib/generated_plugin_registrant.dart
+
+# Android
+source/android/.gradle/
+source/android/local.properties
+source/android/app/debug/
+source/android/app/release/
+
+# iOS
+source/ios/Pods/
+source/ios/.symlinks/
+source/ios/Flutter/Flutter.framework
+source/ios/Flutter/Flutter.podspec
+
+# IDEs and OS
+.idea/
+.vscode/
+*.swp
+*.log
+.DS_Store
