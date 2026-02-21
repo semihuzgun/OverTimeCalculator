@@ -71,24 +71,16 @@ class StorageService {
     await setMonthValue(year, month, amount);
   }
 
-  /// Kümülatif toplamı hesaplar.
-  /// [excludeCurrentMonth] true ise içinde bulunulan ay dahil edilmez.
-  static Future<double> getCumulativeTotal({
-    int? year,
-    bool excludeCurrentMonth = true,
-  }) async {
-    final now = DateTime.now();
-    final y = year ?? now.year;
-    final values = await getMonthlyValues(y);
-    final endMonth = excludeCurrentMonth && y == now.year
-        ? now.month - 1
-        : 12;
-    var total = 0.0;
-    for (var m = 1; m <= endMonth && m <= 12; m++) {
-      total += values[m] ?? 0;
-    }
-    return total;
+ static Future<double> getCumulativeTotal({required int untilMonth}) async 
+ {
+  final values = await getMonthlyValues(DateTime.now().year);
+  
+  var total = 0.0;
+  for (var m = 1; m < untilMonth; m++) {
+    total += values[m] ?? 0;
   }
+  return total;
+}
 
   static String monthLabel(int year, int month) {
     if (month < 1 || month > 12) return '';

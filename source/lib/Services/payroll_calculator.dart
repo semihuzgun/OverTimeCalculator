@@ -14,14 +14,13 @@ class PayrollCalculator {
     {"limit": double.infinity, "rate": 0.40},
   ];
 
-  // SENİN METODUN - İsmi ve yapısı dokunulmadan burada
   static double calculateOvertimeDynamic(double gross, List<Map<String, double>> overtimeList) {
     double hourly = gross / 225;
     double totalOvertime = 0;
     for (var item in overtimeList) {
       double hours = item["hours"] ?? 0;
       double rate = (item["rate"] ?? 0) / 100;
-      totalOvertime += hourly * (1 + rate) * hours;
+      totalOvertime += hourly * (rate) * hours;
     }
     return totalOvertime;
   }
@@ -30,7 +29,8 @@ class PayrollCalculator {
   static double calculateNet({
     required double grossSalary,
     required List<Map<String, double>> overtimeList,
-    required int month, // Ayı buradan alıyoruz
+    required int month,
+    double cumulativeGross = 0, // Arayüzden gelen yıl başı kümülatif brüt
   }) {
     // 1. Brüt ve Matrah Hesabı
     double overtime = calculateOvertimeDynamic(grossSalary, overtimeList);
@@ -40,14 +40,22 @@ class PayrollCalculator {
     double kesintiMiktari = sgkBase * (sgkRate + unemploymentRate);
     double aylikMatrah = totalGross - kesintiMiktari;
 
-    // 2. Kümülatif Matrah (Ay bilgisine göre otomatik hesaplanır)
-    // Nisan (4. ay) için önceki 3 ayın matrahını (51.000 * 3 = 153.000) bulur.
-    double calisanKumulatif = aylikMatrah * (month - 1);
+    // 2. KÜMÜLATİF MATRAH (HAYALET MESAİ HATASI DÜZELTİLDİ)
+    double calisanKumulatif = 0;
+    if (cumulativeGross > 0) {
+      // Eğer sen ekrana 160.000 yazdıysan, bunu matraha (136.000) çevirip kullanır
+      calisanKumulatif = cumulativeGross * (1 - (sgkRate + unemploymentRate));
+    } else {
+      // Ekrana kümülatif girilmediyse, önceki ayları MESAİSİZ (düz maaş) farz et
+      double baseSgk = grossSalary > sgkTavan ? sgkTavan : grossSalary;
+      double baseMatrah = grossSalary - (baseSgk * (sgkRate + unemploymentRate));
+      calisanKumulatif = baseMatrah * (month - 1); 
+    }
 
-    // 3. Gelir Vergisi (Kademeli hesaplama dilim geçişini yakalar)
+    // 3. Gelir Vergisi 
     double rawIncomeTax = _calculateProgressiveTax(calisanKumulatif, aylikMatrah);
 
-    // 4. Asgari Ücret İstisnası (Kendi kümülatifiyle)
+    // 4. Asgari Ücret İstisnası
     double asgariMatrah = asgariBrut * 0.85;
     double asgariKumulatif = asgariMatrah * (month - 1);
     double asgariVergiIstisnasi = _calculateProgressiveTax(asgariKumulatif, asgariMatrah);
@@ -56,7 +64,7 @@ class PayrollCalculator {
     double finalIncomeTax = (rawIncomeTax - asgariVergiIstisnasi).clamp(0, double.infinity);
     double finalStamp = (totalGross * stampTaxRate - asgariBrut * stampTaxRate).clamp(0, double.infinity);
 
-    // 6. Sonuç (Kuruşu kuruşuna tablo uyumlu)
+    // 6. Sonuç
     double net = totalGross - kesintiMiktari - finalIncomeTax - finalStamp;
     return double.parse(net.toStringAsFixed(2));
   }

@@ -1,3 +1,4 @@
+import 'package:fazla_mesai/Screens/help_screen.dart';
 import 'package:flutter/material.dart';
 import '../services/payroll_calculator.dart';
 import '../services/storage_service.dart';
@@ -17,17 +18,17 @@ class _HomeScreenState extends State<HomeScreen> {
   final _cumulativeController = TextEditingController();
 
   final _hours1Controller = TextEditingController();
-  final _rate1Controller = TextEditingController(text: "100");
+  final _rate1Controller = TextEditingController(text: "150");
 
   final _hours2Controller = TextEditingController();
-  final _rate2Controller = TextEditingController(text: "150");
+  final _rate2Controller = TextEditingController(text: "200");
 
   double? netResult;
   double? grossOvertimeResult;
+  double? totalGrossResult;
   BannerAd? _bannerAd;
   bool _isBannerReady = false;
 
-  // Yeni eklenen değişken: Varsayılan olarak içinde bulunduğumuz ay
   int selectedMonth = DateTime.now().month;
 
   @override
@@ -57,10 +58,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadLastInputs() async {
-    final cumulative = await StorageService.getCumulativeTotal();
-    if (mounted && cumulative > 0) {
-      _cumulativeController.text = cumulative.toStringAsFixed(0);
-    }
+    // İlk açılışta seçili aya göre kümülatifi yükle
+    await _loadCumulative();
+    
     final last = await StorageService.loadLastInputs();
     if (mounted && last != null) {
       final g = last['gross'] ?? 0;
@@ -77,10 +77,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return v == v.toInt() ? v.toInt().toString() : v.toString();
   }
 
+  // Ay parametresine göre güncellenen kümülatif yükleme metodu
   Future<void> _loadCumulative() async {
-    final total = await StorageService.getCumulativeTotal();
-    if (mounted && total > 0) {
-      _cumulativeController.text = total.toStringAsFixed(0);
+    final total = await StorageService.getCumulativeTotal(untilMonth: selectedMonth);
+    if (mounted) {
+      setState(() {
+        _cumulativeController.text = total > 0 ? total.toStringAsFixed(0) : '0';
+      });
     }
   }
 
@@ -169,22 +172,21 @@ class _HomeScreenState extends State<HomeScreen> {
     double cumulativeFromUI = double.tryParse(_cumulativeController.text) ?? 0;
 
     double h1 = double.tryParse(_hours1Controller.text) ?? 0;
-    double r1 = double.tryParse(_rate1Controller.text) ?? 100;
+    double r1 = double.tryParse(_rate1Controller.text) ?? 150;
 
     double h2 = double.tryParse(_hours2Controller.text) ?? 0;
-    double r2 = double.tryParse(_rate2Controller.text) ?? 150;
+    double r2 = double.tryParse(_rate2Controller.text) ?? 200;
 
     List<Map<String, double>> overtimeList = [
       {"hours": h1, "rate": r1},
       {"hours": h2, "rate": r2},
     ];
 
-    // Seçilen ay metodumuza gönderiliyor.
-    // Metot artık içeride kümülatifi bu aya göre otomatik hesaplayacak.
     double net = PayrollCalculator.calculateNet(
       grossSalary: gross,
       overtimeList: overtimeList,
       month: selectedMonth, 
+      cumulativeGross: cumulativeFromUI
     );
 
     double overTime = PayrollCalculator.calculateOvertimeDynamic(gross, overtimeList);
@@ -192,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       netResult = net;
       grossOvertimeResult = overTime;
+      totalGrossResult = gross + overTime;
     });
 
     StorageService.saveLastInputs(
@@ -207,14 +210,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _bannerAd?.dispose();
+    _grossController.dispose();
+    _cumulativeController.dispose();
+    _hours1Controller.dispose();
+    _rate1Controller.dispose();
+    _hours2Controller.dispose();
+    _rate2Controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
-    
-    // Seçilen aya göre isim oluşturma
     String displayMonthName = DateFormat.MMMM('tr_TR').format(DateTime(2026, selectedMonth));
 
     return Scaffold(
@@ -257,6 +264,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ).then((_) => _loadCumulative());
               },
+            ), 
+            ListTile(
+              leading: const Icon(Icons.question_mark),
+              title: const Text('Yardım'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HelpScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -266,13 +286,12 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             _buildInput("Aylık Brüt Maaş", _grossController),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildOvertimeRow(_hours1Controller, _rate1Controller),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildOvertimeRow(_hours2Controller, _rate2Controller),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             
-            // Ay Seçici Dropdown
             DropdownButtonFormField<int>(
               value: selectedMonth,
               decoration: InputDecoration(
@@ -286,8 +305,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(DateFormat.MMMM('tr_TR').format(DateTime(2026, i + 1))),
                 );
               }),
-              onChanged: (val) {
-                if (val != null) setState(() => selectedMonth = val);
+              onChanged: (val) async {
+                if (val != null) {
+                  setState(() => selectedMonth = val);
+                  await _loadCumulative(); // Ay değiştiğinde kümülatifi güncelle
+                }
               },
             ),
             
@@ -307,40 +329,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (grossOvertimeResult != null) ...[
+                      if (grossOvertimeResult != null && totalGrossResult != null) ...[
                         Text(
                           "$displayMonthName Ayı Fazla Mesai Brüt Ücreti",
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(height: 5),
                         Text(
                           currency.format(grossOvertimeResult),
                           style: const TextStyle(
-                            fontSize: 22,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        Text(
+                          "$displayMonthName Ayı Toplam Brüt Ücreti",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          currency.format(totalGrossResult),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                       Text(
                         "$displayMonthName Ayı Tahmini Net Ücret",
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 5),
                       Text(
                         currency.format(netResult),
                         style: const TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 10),
                       if (grossOvertimeResult != null)
                         TextButton.icon(
                           onPressed: _showSaveToCumulativeDialog,
                           icon: const Icon(Icons.save),
                           label: const Text('Bu ayı kümülatife kaydet'),
                         ),
+                      const Divider(),
                       const Text(
                         "Bu hesaplama bilgilendirme amaçlıdır.\n"
                         "Vergi dilimi ve kesintiler kullanıcı beyanına göre tahmini hesaplanmıştır.\n"
