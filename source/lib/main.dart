@@ -5,7 +5,10 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try{
   await MobileAds.instance.initialize();
+  }
+  catch(e){  }
   await initializeDateFormatting('tr_TR', null);
 
   runApp(const PayrollApp());

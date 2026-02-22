@@ -1,0 +1,67 @@
+pass:123456
+first and LastName: Semih UZGUN
+organizational unit:mobileutilityapps
+organizational:mobileutilityapps
+City or locality:Bursa
+State: Turkiye
+two-letter:boş geçtim
+
+Microsoft Windows [Version 10.0.19045.6456]
+(c) Microsoft Corporation. Tüm hakları saklıdır.
+
+C:\WINDOWS\system32>cd C:\MyGitProject\FazlaMesai\source\android
+Sistem belirtilen yolu bulamıyor.
+
+C:\WINDOWS\system32>C:\MyGitProject\FazlaMesai\fazlamesai\source\android
+'C:\MyGitProject\FazlaMesai\fazlamesai\source\android' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\WINDOWS\system32>cd C:\MyGitProject\FazlaMesai\fazlamesai\source\android
+
+C:\MyGitProject\FazlaMesai\fazlamesai\source\android>keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+'keytool' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\MyGitProject\FazlaMesai\fazlamesai\source\android>java -version
+'java' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\MyGitProject\FazlaMesai\fazlamesai\source\android>C:\Program Files\Android\Android Studio\jbr\bin
+'C:\Program' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\MyGitProject\FazlaMesai\fazlamesai\source\android>cd C:\Program Files\Android\Android Studio\jbr\bin
+
+C:\Program Files\Android\Android Studio\jbr\bin>java -version
+openjdk version "21.0.8" 2025-07-15
+OpenJDK Runtime Environment (build 21.0.8+-14196175-b1038.72)
+OpenJDK 64-Bit Server VM (build 21.0.8+-14196175-b1038.72, mixed mode)
+
+C:\Program Files\Android\Android Studio\jbr\bin>keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+Enter keystore password:
+Keystore password is too short - must be at least 6 characters
+Enter keystore password:
+Keystore password is too short - must be at least 6 characters
+Enter keystore password:
+Re-enter new password:
+Enter the distinguished name. Provide a single dot (.) to leave a sub-component empty or press ENTER to use the default value in braces.
+What is your first and last name?
+  [Unknown]:  Semih UZGUN
+What is the name of your organizational unit?
+  [Unknown]:  mobileutilityapps
+What is the name of your organization?
+  [Unknown]:  mobileutilityapps
+What is the name of your City or Locality?
+  [Unknown]:  Bursa
+What is the name of your State or Province?
+  [Unknown]:  Turkiye
+What is the two-letter country code for this unit?
+  [Unknown]:
+Is CN=Semih UZGUN, OU=mobileutilityapps, O=mobileutilityapps, L=Bursa, ST=Turkiye, C=Unknown correct?
+  [no]:  yes
+
+Generating 2.048 bit RSA key pair and self-signed certificate (SHA384withRSA) with a validity of 10.000 days
+        for: CN=Semih UZGUN, OU=mobileutilityapps, O=mobileutilityapps, L=Bursa, ST=Turkiye, C=Unknown
+[Storing upload-keystore.jks]
+
+C:\Program Files\Android\Android Studio\jbr\bin>
