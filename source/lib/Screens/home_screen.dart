@@ -1,10 +1,13 @@
-import 'package:fazla_mesai/Screens/help_screen.dart';
 import 'package:flutter/material.dart';
-import '../services/payroll_calculator.dart';
-import '../services/storage_service.dart';
-import 'cumulative_screen.dart';
-import 'package:intl/intl.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:intl/intl.dart';
+
+import '../Services/ads_manager.dart';
+import '../Services/payroll_calculator.dart';
+import '../Services/storage_service.dart';
+import 'cumulative_screen.dart';
+import 'help_screen.dart';
+import 'hourly_wage_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,7 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
   double? netResult;
   double? grossOvertimeResult;
   double? totalGrossResult;
-  BannerAd? _bannerAd;
+
+  late final BannerAd _bannerAd;
+  bool _bannerCreated = false;
   bool _isBannerReady = false;
 
   int selectedMonth = DateTime.now().month;
@@ -39,37 +44,47 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _loadBanner() {
+    if (!AdsManager.isEnabled) {
+      print('[Ads] AdsManager disabled, skipping banner load.');
+      return;
+    }
+
+    _bannerCreated = true;
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-7094276259997672/9741478121', 
+      adUnitId: AdsManager.adUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
-          setState(() {
-            _isBannerReady = true;
-          });
+          print('[Ads] Banner loaded successfully.');
+          if (!mounted) return;
+          setState(() => _isBannerReady = true);
         },
         onAdFailedToLoad: (ad, error) {
+          print('[Ads] Banner failed to load: $error');
           ad.dispose();
         },
       ),
     );
-    _bannerAd!.load();
+
+    _bannerAd.load();
   }
 
   Future<void> _loadLastInputs() async {
     // İlk açılışta seçili aya göre kümülatifi yükle
     await _loadCumulative();
-    
+
     final last = await StorageService.loadLastInputs();
-    if (mounted && last != null) {
-      final g = last['gross'] ?? 0;
-      if (g > 0) _grossController.text = g.toStringAsFixed(0);
-      _hours1Controller.text = _formatSaved(last['hours1']);
-      _rate1Controller.text = _formatSaved(last['rate1'], defaultVal: 150);
-      _hours2Controller.text = _formatSaved(last['hours2']);
-      _rate2Controller.text = _formatSaved(last['rate2'], defaultVal: 200);
-    }
+    if (!mounted || last == null) return;
+
+    final g = last['gross'] ?? 0;
+    if (g > 0) _grossController.text = g.toStringAsFixed(0);
+
+    _hours1Controller.text = _formatSaved(last['hours1']);
+    _rate1Controller.text = _formatSaved(last['rate1'], defaultVal: 150);
+
+    _hours2Controller.text = _formatSaved(last['hours2']);
+    _rate2Controller.text = _formatSaved(last['rate2'], defaultVal: 200);
   }
 
   String _formatSaved(double? v, {double? defaultVal}) {
@@ -77,24 +92,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return v == v.toInt() ? v.toInt().toString() : v.toString();
   }
 
-  // Ay parametresine göre güncellenen kümülatif yükleme metodu
   Future<void> _loadCumulative() async {
-    final total = await StorageService.getCumulativeTotal(untilMonth: selectedMonth);
-    if (mounted) {
-      setState(() {
-        _cumulativeController.text = total > 0 ? total.toStringAsFixed(0) : '0';
-      });
-    }
+    final total =
+        await StorageService.getCumulativeTotal(untilMonth: selectedMonth);
+    if (!mounted) return;
+    setState(() {
+      _cumulativeController.text = total > 0 ? total.toStringAsFixed(2) : '0';
+    });
   }
 
   void _showSaveToCumulativeDialog() {
     double gross = double.tryParse(_grossController.text) ?? 0;
     if (gross <= 0 || grossOvertimeResult == null) return;
+
     final totalBrut = gross + grossOvertimeResult!;
     final currency = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
     final year = DateTime.now().year;
 
-    int dialogSelectedMonth = selectedMonth; 
+    int dialogSelectedMonth = selectedMonth;
 
     showDialog<void>(
       context: context,
@@ -146,16 +161,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   dialogSelectedMonth,
                   totalBrut,
                 );
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        '${StorageService.monthLabel(year, dialogSelectedMonth)} kaydedildi: ${currency.format(totalBrut)}',
-                      ),
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '${StorageService.monthLabel(year, dialogSelectedMonth)} kaydedildi: ${currency.format(totalBrut)}',
                     ),
-                  );
-                  _loadCumulative();
-                }
+                  ),
+                );
+                _loadCumulative();
               },
               style: ElevatedButton.styleFrom(minimumSize: const Size(100, 50)),
               icon: const Icon(Icons.save),
@@ -177,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
     double h2 = double.tryParse(_hours2Controller.text) ?? 0;
     double r2 = double.tryParse(_rate2Controller.text) ?? 200;
 
-    List<Map<String, double>> overtimeList = [
+     List<Map<String, double>> overtimeList = <Map<String, double>>[
       {"hours": h1, "rate": r1},
       {"hours": h2, "rate": r2},
     ];
@@ -185,11 +200,12 @@ class _HomeScreenState extends State<HomeScreen> {
     double net = PayrollCalculator.calculateNet(
       grossSalary: gross,
       overtimeList: overtimeList,
-      month: selectedMonth, 
-      cumulativeGross: cumulativeFromUI
+      month: selectedMonth,
+      cumulativeGross: cumulativeFromUI,
     );
 
-    double overTime = PayrollCalculator.calculateOvertimeDynamic(gross, overtimeList);
+    double overTime =
+        PayrollCalculator.calculateOvertimeDynamic(gross, overtimeList);
 
     setState(() {
       netResult = net;
@@ -209,7 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
+    if (AdsManager.isEnabled && _bannerCreated) {
+      _bannerAd.dispose();
+    }
     _grossController.dispose();
     _cumulativeController.dispose();
     _hours1Controller.dispose();
@@ -222,17 +240,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'tr_TR', symbol: '₺');
-    String displayMonthName = DateFormat.MMMM('tr_TR').format(DateTime(2026, selectedMonth));
+    String displayMonthName =
+        DateFormat.MMMM('tr_TR').format(DateTime(2026, selectedMonth));
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Fazla Mesai Hesaplama")),
+      appBar: AppBar(title: const Text("Aylık Brüt Ücret ile Hesaplama")),
       bottomNavigationBar: _isBannerReady
           ? Container(
               padding: const EdgeInsets.only(bottom: 12, top: 6),
               color: Colors.white,
               child: SizedBox(
-                height: _bannerAd!.size.height.toDouble(),
-                child: AdWidget(ad: _bannerAd!),
+                height: _bannerAd.size.height.toDouble(),
+                child: AdWidget(ad: _bannerAd),
               ),
             )
           : null,
@@ -249,8 +268,21 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.calculate),
-              title: const Text('Hesaplama'),
+              title: const Text('Hesaplama (Aylık Brüt)'),
               onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.schedule),
+              title: const Text('Hesaplama(Saatlik Brüt)'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HourlyWageScreen(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.savings),
@@ -264,7 +296,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ).then((_) => _loadCumulative());
               },
-            ), 
+            ),
             ListTile(
               leading: const Icon(Icons.question_mark),
               title: const Text('Yardım'),
@@ -291,7 +323,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             _buildOvertimeRow(_hours2Controller, _rate2Controller),
             const SizedBox(height: 10),
-            
             DropdownButtonFormField<int>(
               value: selectedMonth,
               decoration: InputDecoration(
@@ -302,17 +333,18 @@ class _HomeScreenState extends State<HomeScreen> {
               items: List.generate(12, (i) {
                 return DropdownMenuItem(
                   value: i + 1,
-                  child: Text(DateFormat.MMMM('tr_TR').format(DateTime(2026, i + 1))),
+                  child: Text(
+                    DateFormat.MMMM('tr_TR').format(DateTime(2026, i + 1)),
+                  ),
                 );
               }),
               onChanged: (val) async {
                 if (val != null) {
                   setState(() => selectedMonth = val);
-                  await _loadCumulative(); // Ay değiştiğinde kümülatifi güncelle
+                  await _loadCumulative();
                 }
               },
             ),
-            
             const SizedBox(height: 12),
             _buildInput("Yıl Başı Kümülatif Brüt", _cumulativeController),
             const SizedBox(height: 10),
@@ -336,10 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         Text(
                           currency.format(grossOvertimeResult),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           "$displayMonthName Ayı Toplam Brüt Ücreti",
@@ -347,10 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         Text(
                           currency.format(totalGrossResult),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ],
                       Text(
@@ -359,10 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       Text(
                         currency.format(netResult),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       if (grossOvertimeResult != null)
                         TextButton.icon(

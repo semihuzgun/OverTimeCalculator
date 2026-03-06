@@ -29,7 +29,7 @@ class _CumulativeScreenState extends State<CumulativeScreen> {
     final values = await StorageService.getMonthlyValues(_year);
     for (var m = 1; m <= 12; m++) {
       final v = values[m] ?? 0;
-      _controllers[m]!.text = v > 0 ? v.toStringAsFixed(0) : '';
+      _controllers[m]!.text = v > 0 ? v.toStringAsFixed(2) : '';
     }
     setState(() => _loading = false);
   }
