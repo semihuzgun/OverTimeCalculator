@@ -39,6 +39,84 @@ class HelpScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 8),
+            _buildHeader(context, 'Saatlik Ücret ile Hesaplama'),
+            const SizedBox(height: 16),
+
+            _buildGuideCard(
+              context,
+              icon: Icons.schedule,
+              title: '1. Saatlik Brüt Ücret Girişi',
+              description: 'Bordronuzda veya sözleşmenizde belirtilen saatlik brüt ücretinizi girin. Uygulama bu tutarı aylık 225 saate çarparak aylık brüt maaşınızı otomatik hesaplar.',
+            ),
+
+            _buildGuideCard(
+              context,
+              icon: Icons.calculate_outlined,
+              title: '2. Aylık Saat Tabanı (225 Saat)',
+              description: 'Türkiye\'de yasal aylık çalışma süresi 225 saat olarak kabul edilir (haftalık 45 saat × 5 hafta). Saatlik ücretiniz bu katsayı ile çarpılarak aylık brüt maaşa dönüştürülür.',
+            ),
+
+            _buildGuideCard(
+              context,
+              icon: Icons.more_time,
+              title: '3. Mesai Saatleri ve Oranları',
+              description: 'Saatlik ücret ekranında da aynı mesai mantığı geçerlidir. Hafta içi mesailer için %150, hafta sonu ve resmi tatil mesaileri için %200 oranını kullanın.',
+            ),
+
+            _buildGuideCard(
+              context,
+              icon: Icons.swap_horiz,
+              title: '4. Aylık / Saatlik Geçiş',
+              description: 'Sol üst köşedeki menüden "Aylık Brüt" ve "Saatlik Brüt" modları arasında geçiş yapabilirsiniz. Uygulama, bir sonraki açılışta son seçtiğiniz ekranı otomatik olarak açar.',
+            ),
+
+            const SizedBox(height: 16),
+
+            // Saatlik ipucu kutusu
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Saatlik Ücretinizi Nasıl Öğrenirsiniz?',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Aylık brüt maaşınızı 225\'e bölerek saatlik brüt ücretinizi hesaplayabilirsiniz. Örneğin aylık brüt 45.000 ₺ ise saatlik ücretiniz 45.000 ÷ 225 = 200 ₺ olur.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
             _buildHeader(context, 'Kümülatif ve Kayıt Yönetimi'),
             const SizedBox(height: 16),
 

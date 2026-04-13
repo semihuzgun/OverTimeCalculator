@@ -5,6 +5,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 12 aylık yapı: Ocak–Aralık
 /// Kümülatif = tüm ayların toplamı
 class StorageService {
+
+ static const _keyLastScreen = 'last_screen_mode';
+
+  static Future<void> saveLastScreenMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLastScreen, mode);
+  }
+
+ 
+  static Future<String> loadLastScreenMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyLastScreen) ?? 'monthly';
+  }
+
   static const _keyMonthlyBrut = 'monthly_brut';
 
   static const _monthNames = [
@@ -171,3 +185,4 @@ class StorageService {
     });
   }
 }
+

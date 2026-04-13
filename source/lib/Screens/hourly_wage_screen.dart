@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:intl/intl.dart';
-
 import '../Services/ads_manager.dart';
 import '../Services/payroll_calculator.dart';
 import '../Services/storage_service.dart';
+import 'cumulative_screen.dart';
+import 'help_screen.dart';
+import 'home_screen.dart';
 
 class HourlyWageScreen extends StatefulWidget {
   const HourlyWageScreen({super.key});
@@ -42,7 +44,10 @@ class _HourlyWageScreenState extends State<HourlyWageScreen> {
   }
 
   void _loadBanner() {
-    if (!AdsManager.isEnabled) return;
+    if (!AdsManager.isEnabled) {
+      print('[Ads] AdsManager disabled, skipping banner load.');
+      return;
+    }
 
     _bannerCreated = true;
     _bannerAd = BannerAd(
@@ -51,10 +56,12 @@ class _HourlyWageScreenState extends State<HourlyWageScreen> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
+          print('[Ads] Banner loaded successfully.');
           if (!mounted) return;
           setState(() => _isBannerReady = true);
         },
         onAdFailedToLoad: (ad, error) {
+          print('[Ads] Banner failed to load: $error');
           ad.dispose();
         },
       ),
@@ -278,6 +285,69 @@ class _HourlyWageScreenState extends State<HourlyWageScreen> {
               ),
             )
           : null,
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Color(0xFF2E86DE)),
+              child: Text(
+                'Menü',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calculate),
+              title: const Text('Hesaplama (Saatlik Brüt)'),
+              onTap: () {
+                StorageService.saveLastScreenMode('hourly');
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.schedule),
+              title: const Text('Hesaplama(Aylık Brüt)'),
+              onTap: () {
+                StorageService.saveLastScreenMode('monthly');
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HomeScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.savings),
+              title: const Text('Kümülatif Yönetimi'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CumulativeScreen(),
+                  ),
+                ).then((_) => _loadCumulative());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.question_mark),
+              title: const Text('Yardım'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HelpScreen(),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+          
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

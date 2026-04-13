@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'screens/hourly_wage_screen.dart';
 import 'services/Ads_manager.dart';
+import 'services/storage_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 Future<void> main() async {
@@ -8,11 +10,15 @@ Future<void> main() async {
   await AdsManager.initialize();
   await initializeDateFormatting('tr_TR', null);
 
-  runApp(const PayrollApp());
+  // Son seçilen ekranı oku
+  final lastMode = await StorageService.loadLastScreenMode();
+
+  runApp(PayrollApp(initialMode: lastMode));
 }
 
 class PayrollApp extends StatelessWidget {
-  const PayrollApp({super.key});
+  final String initialMode;
+  const PayrollApp({super.key, required this.initialMode});
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +77,10 @@ class PayrollApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      // initialMode'a göre hangi ekranın açılacağını belirle
+      home: initialMode == 'hourly'
+          ? const HourlyWageScreen()
+          : const HomeScreen(),
     );
   }
 }

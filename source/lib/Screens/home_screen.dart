@@ -269,12 +269,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ListTile(
               leading: const Icon(Icons.calculate),
               title: const Text('Hesaplama (Aylık Brüt)'),
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                StorageService.saveLastScreenMode('monthly');
+                Navigator.pop(context);
+              },
             ),
             ListTile(
               leading: const Icon(Icons.schedule),
               title: const Text('Hesaplama(Saatlik Brüt)'),
               onTap: () {
+                StorageService.saveLastScreenMode('hourly');
                 Navigator.pop(context);
                 Navigator.push(
                   context,
